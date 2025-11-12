@@ -3,6 +3,7 @@ import multer from "multer";
 import cors from "cors";
 import dotenv from "dotenv";
 import pkg from "pg";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -36,17 +37,24 @@ pool.connect()
   .then(() => console.log("✅ Connected to PostgreSQL database successfully"))
   .catch((err) => console.error("❌ Database connection failed:", err.message));
 
-// ✅ Multer setup with absolute path
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log("📁 Created uploads directory at", uploadDir);
+}
+
+// Multer setup for uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "uploads")); // Always use absolute path
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // Routes
 app.get("/", (req, res) => {
@@ -59,7 +67,15 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => 
     console.log("📎 Files uploaded:", req.files);
 
     const { fullname, phone, complaint_type, description, urgency, latitude, longitude } = req.body;
-    const file_urls = req.files.map((file) => `/uploads/${file.filename}`);
+
+    if (!fullname || !phone || !complaint_type || !description || !urgency) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const file_urls = (req.files && req.files.length > 0)
+      ? req.files.map((file) => `/uploads/${file.filename}`)
+      : [];
+
     const timestamp = new Date();
 
     const insertQuery = `
@@ -76,11 +92,11 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => 
     res.status(200).json({ message: "Complaint submitted successfully!", id: result.rows[0].id });
   } catch (err) {
     console.error("❌ Error inserting complaint:", err);
-    next(err); // Pass to global error handler
+    next(err);
   }
 });
 
-// ✅ Global error handler
+// Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Internal Server Error:", err);
   res.status(500).json({
