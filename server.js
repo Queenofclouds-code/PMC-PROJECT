@@ -36,10 +36,10 @@ pool.connect()
   .then(() => console.log("✅ Connected to PostgreSQL database successfully"))
   .catch((err) => console.error("❌ Database connection failed:", err.message));
 
-// Multer setup for uploads
+// ✅ Multer setup with absolute path
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, path.join(__dirname, "uploads")); // Always use absolute path
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -53,12 +53,11 @@ app.get("/", (req, res) => {
   res.send("🚀 PMC Complaint Portal Backend is running!");
 });
 
-app.post("/api/complaints", upload.array("files", 5), async (req, res) => {
-  // ✅ Debug logs to confirm request is received
-  console.log("📥 Received complaint:", req.body);
-  console.log("📎 Files uploaded:", req.files);
-
+app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => {
   try {
+    console.log("📥 Received complaint:", req.body);
+    console.log("📎 Files uploaded:", req.files);
+
     const { fullname, phone, complaint_type, description, urgency, latitude, longitude } = req.body;
     const file_urls = req.files.map((file) => `/uploads/${file.filename}`);
     const timestamp = new Date();
@@ -76,9 +75,18 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res) => {
 
     res.status(200).json({ message: "Complaint submitted successfully!", id: result.rows[0].id });
   } catch (err) {
-    console.error("❌ Error inserting complaint:", err.message);
-    res.status(500).json({ error: "Something went wrong while submitting the complaint" });
+    console.error("❌ Error inserting complaint:", err);
+    next(err); // Pass to global error handler
   }
+});
+
+// ✅ Global error handler
+app.use((err, req, res, next) => {
+  console.error("❌ Internal Server Error:", err);
+  res.status(500).json({
+    message: "Internal Server Error",
+    error: err.message,
+  });
 });
 
 // Start the server
