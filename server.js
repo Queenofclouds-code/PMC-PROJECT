@@ -82,10 +82,11 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res) => {
     );
 
     const query = `
-      INSERT INTO pmc_data 
-      (fullname, phone, complaint_type, description, urgency, latitude, longitude, file_urls) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `;
+  INSERT INTO pmc_data 
+  (fullname, phone, complaint_type, description, urgency, latitude, longitude, timestamp, file_urls)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+`;
+
     await pool.query(query, [
       fullname,
       phone,
