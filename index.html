@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pune Municipal Complaint Portal</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f6f8;
+        margin: 0;
+        padding: 0;
+      }
+
+      header {
+        background-color: #0078d7;
+        color: white;
+        padding: 15px 0;
+        text-align: center;
+      }
+
+      .container {
+        max-width: 700px;
+        margin: 30px auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      h2 {
+        text-align: center;
+        color: #333;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      input,
+      textarea,
+      select,
+      button {
+        font-size: 1em;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+
+      button {
+        background-color: #0078d7;
+        color: white;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background-color: #005fa3;
+      }
+
+      .preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .preview img,
+      .preview video {
+        width: 100px;
+        height: 100px;
+        border-radius: 5px;
+        object-fit: cover;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>Pune Municipal Complaint Portal</h1>
+    </header>
+
+    <div class="container">
+      <h2>Register a Complaint</h2>
+      <form id="complaintForm">
+        <input type="text" id="fullname" placeholder="Full Name" required />
+        <input type="tel" id="phone" placeholder="Phone Number" required />
+        <select id="complaint_type" required>
+          <option value="">-- Select Complaint Type --</option>
+          <option value="Garbage">Garbage</option>
+          <option value="Road Damage">Road Damage</option>
+          <option value="Water Supply">Water Supply</option>
+          <option value="Electricity">Electricity</option>
+          <option value="Street Light">Street Light</option>
+        </select>
+        <textarea
+          id="description"
+          placeholder="Describe your issue..."
+          rows="4"
+          required
+        ></textarea>
+        <select id="urgency" required>
+          <option value="">-- Urgency Level --</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+
+        <label for="files">Upload Images/Videos (optional)</label>
+        <input
+          type="file"
+          id="files"
+          name="files"
+          accept="image/*,video/*"
+          multiple
+        />
+
+        <div class="preview" id="preview"></div>
+
+        <input
+          type="text"
+          id="latitude"
+          placeholder="Latitude"
+          readonly
+          required
+        />
+        <input
+          type="text"
+          id="longitude"
+          placeholder="Longitude"
+          readonly
+          required
+        />
+
+        <button type="submit">Submit Complaint</button>
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById("complaintForm");
+      const filesInput = document.getElementById("files");
+      const previewContainer = document.getElementById("preview");
+
+      // ✅ Preview selected media
+      filesInput.addEventListener("change", () => {
+        previewContainer.innerHTML = "";
+        Array.from(filesInput.files).forEach((file) => {
+          const mediaElement = document.createElement(
+            file.type.startsWith("video") ? "video" : "img"
+          );
+          mediaElement.src = URL.createObjectURL(file);
+          if (file.type.startsWith("video")) mediaElement.controls = true;
+          previewContainer.appendChild(mediaElement);
+        });
+      });
+
+      // ✅ Get location automatically
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            document.getElementById("latitude").value =
+              pos.coords.latitude.toFixed(6);
+            document.getElementById("longitude").value =
+              pos.coords.longitude.toFixed(6);
+          },
+          () => alert("Unable to fetch location.")
+        );
+      }
+
+      // ✅ Form submission
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const fd = new FormData();
+        fd.append("fullname", document.getElementById("fullname").value);
+        fd.append("phone", document.getElementById("phone").value);
+        fd.append(
+          "complaint_type",
+          document.getElementById("complaint_type").value
+        );
+        fd.append("description", document.getElementById("description").value);
+        fd.append("urgency", document.getElementById("urgency").value);
+        fd.append("latitude", document.getElementById("latitude").value);
+        fd.append("longitude", document.getElementById("longitude").value);
+
+        // ✅ Fixed field name: 'files' (backend expects this)
+        Array.from(filesInput.files).forEach((f) =>
+          fd.append("files", f, f.name)
+        );
+
+        try {
+          const response = await fetch("/api/complaints", {
+            method: "POST",
+            body: fd,
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            alert("✅ Complaint submitted successfully!");
+            form.reset();
+            previewContainer.innerHTML = "";
+          } else {
+            alert("❌ Failed to submit complaint: " + result.message);
+          }
+        } catch (error) {
+          console.error(error);
+          alert("❌ Something went wrong while submitting the complaint.");
+        }
+      });
+    </script>
+  </body>
+</html>
