@@ -186,7 +186,6 @@
         fd.append("latitude", document.getElementById("latitude").value);
         fd.append("longitude", document.getElementById("longitude").value);
 
-        // ✅ Fixed field name: 'files' (backend expects this)
         Array.from(filesInput.files).forEach((f) =>
           fd.append("files", f, f.name)
         );
@@ -198,12 +197,12 @@
           });
 
           const result = await response.json();
-          if (result.success) {
-            alert("✅ Complaint submitted successfully!");
+          if (response.ok) {
+            alert("✅ " + (result.message || "Complaint submitted successfully!"));
             form.reset();
             previewContainer.innerHTML = "";
           } else {
-            alert("❌ Failed to submit complaint: " + result.message);
+            alert("❌ Failed to submit complaint: " + (result.error || "Unknown error"));
           }
         } catch (error) {
           console.error(error);
