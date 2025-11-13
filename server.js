@@ -95,6 +95,27 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => 
     next(err);
   }
 });
+app.get("/api/complaints", async (req, res) => {
+  try {
+    const baseUrl = process.env.BASE_URL || "https://gist.aeronica.in";
+
+    const result = await pool.query("SELECT * FROM pmc_data ORDER BY id DESC");
+    const rows = result.rows;
+
+    const updatedRows = rows.map((item) => ({
+      ...item,
+      file_urls: item.file_urls
+        ? item.file_urls.map((p) => `${baseUrl}${p}`)
+        : [],
+    }));
+
+    res.json(updatedRows);
+  } catch (err) {
+    console.error("❌ Error fetching complaints:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 app.use((err, req, res, next) => {
