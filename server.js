@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import pkg from "pg";
 import fs from "fs";
 import path from "path";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { fileURLToPath } from "url";
 
 dotenv.config();
@@ -21,7 +23,6 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-
 const { Pool } = pkg;
 
 const pool = new Pool({
@@ -31,7 +32,6 @@ const pool = new Pool({
   password: process.env.PGPASSWORD || "meghaj",
   port: process.env.PGPORT || 5432,
 });
-
 
 pool.connect()
   .then(() => console.log("✅ Connected to PostgreSQL database successfully"))
@@ -44,108 +44,131 @@ if (!fs.existsSync(uploadDir)) {
   console.log("📁 Created uploads directory at", uploadDir);
 }
 
-
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
+// -----------------------------
+// 🔐 JWT AUTH MIDDLEWARE
+// -----------------------------
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
 
+  if (!token)
+    return res.status(401).json({ message: "No token provided. Unauthorized." });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.admin = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token." });
+  }
+}
+
+// -----------------------------
+// 🔐 ADMIN LOGIN
+// -----------------------------
+app.post("/api/admin/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const result = await pool.query(
+      "SELECT * FROM admin_users WHERE username=$1",
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid username" });
+    }
+
+    const admin = result.rows[0];
+
+    const isMatch = await bcrypt.compare(password, admin.password_hash);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect password" });
+    }
+
+    // Generate JWT Token
+    const token = jwt.sign(
+      { id: admin.id, username: admin.username },
+      process.env.JWT_SECRET,
+      { expiresIn: "2h" }
+    );
+
+    res.json({ message: "Login successful", token });
+
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// -----------------------------
+// PUBLIC ROUTES
+// -----------------------------
 app.get("/", (req, res) => {
   res.send("🚀 PMC Complaint Portal Backend is running!");
 });
 
+// Submit complaint
 app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => {
   try {
-    console.log("📥 Received complaint:", req.body);
-    console.log("📎 Files uploaded:", req.files);
-
     const { fullname, phone, complaint_type, description, urgency, latitude, longitude } = req.body;
 
-    if (!fullname || !phone || !complaint_type || !description || !urgency) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const file_urls = (req.files && req.files.length > 0)
-      ? req.files.map((file) => `/uploads/${file.filename}`)
-      : [];
+    const file_urls = (req.files || []).map((file) => `/uploads/${file.filename}`);
 
     const timestamp = new Date();
 
-    const insertQuery = `
-      INSERT INTO pmc_data (fullname, phone, complaint_type, description, urgency, latitude, longitude, timestamp, file_urls)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id;
-    `;
+    const result = await pool.query(
+      `INSERT INTO pmc_data (fullname, phone, complaint_type, description, urgency, latitude, longitude, timestamp, file_urls)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       RETURNING id`,
+      [fullname, phone, complaint_type, description, urgency, latitude, longitude, timestamp, JSON.stringify(file_urls)]
+    );
 
-    const values = [fullname, phone, complaint_type, description, urgency, latitude, longitude, timestamp, JSON.stringify(file_urls)];
+    res.json({ message: "Complaint submitted successfully!", id: result.rows[0].id });
 
-    const result = await pool.query(insertQuery, values);
-    console.log("✅ Complaint inserted with ID:", result.rows[0].id);
-
-    res.status(200).json({ message: "Complaint submitted successfully!", id: result.rows[0].id });
   } catch (err) {
     console.error("❌ Error inserting complaint:", err);
     next(err);
   }
 });
-app.get("/api/complaints", async (req, res) => {
+
+// -----------------------------
+// 🔐 PROTECTED ADMIN ROUTE — VIEW COMPLAINTS
+// -----------------------------
+app.get("/api/admin/complaints", verifyToken, async (req, res) => {
   try {
     const baseUrl = process.env.BASE_URL || "https://gist.aeronica.in";
 
     const result = await pool.query("SELECT * FROM pmc_data ORDER BY id DESC");
-    
-    const updatedRows = result.rows.map((item) => {
-      let files = [];
 
-      try {
-        if (Array.isArray(item.file_urls)) {
-          // Already an array
-          files = item.file_urls;
-        } else if (typeof item.file_urls === "string") {
-          // Convert string → array
-          files = JSON.parse(item.file_urls);
-        } else {
-          files = [];
-        }
-      } catch (e) {
-        files = [];
-      }
-
-      // Convert /uploads/xxx → https://domain/uploads/xxx
-      const fullUrls = files.map((p) => `${baseUrl}${p}`);
-
+    const updated = result.rows.map((row) => {
+      const files = typeof row.file_urls === "string" ? JSON.parse(row.file_urls) : row.file_urls;
       return {
-        ...item,
-        file_urls: fullUrls
+        ...row,
+        file_urls: files.map((f) => baseUrl + f)
       };
     });
 
-    res.json(updatedRows);
+    res.json(updated);
+
   } catch (err) {
-    console.error("❌ Error in GET /api/complaints:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Error fetching complaints:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-
-
-
+// Error Handler
 app.use((err, req, res, next) => {
-  console.error("❌ Internal Server Error:", err);
-  res.status(500).json({
-    message: "Internal Server Error",
-    error: err.message,
-  });
+  res.status(500).json({ message: "Internal Server Error", error: err.message });
 });
 
-
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-});
+app.listen(port, () =>
+  console.log(`🚀 Server running on port ${port}`)
+);
