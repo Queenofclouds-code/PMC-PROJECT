@@ -100,21 +100,40 @@ app.get("/api/complaints", async (req, res) => {
     const baseUrl = process.env.BASE_URL || "https://gist.aeronica.in";
 
     const result = await pool.query("SELECT * FROM pmc_data ORDER BY id DESC");
-    const rows = result.rows;
+    
+    const updatedRows = result.rows.map((item) => {
+      let files = [];
 
-    const updatedRows = rows.map((item) => ({
-      ...item,
-      file_urls: item.file_urls
-        ? item.file_urls.map((p) => `${baseUrl}${p}`)
-        : [],
-    }));
+      try {
+        if (Array.isArray(item.file_urls)) {
+          // Already an array
+          files = item.file_urls;
+        } else if (typeof item.file_urls === "string") {
+          // Convert string → array
+          files = JSON.parse(item.file_urls);
+        } else {
+          files = [];
+        }
+      } catch (e) {
+        files = [];
+      }
+
+      // Convert /uploads/xxx → https://domain/uploads/xxx
+      const fullUrls = files.map((p) => `${baseUrl}${p}`);
+
+      return {
+        ...item,
+        file_urls: fullUrls
+      };
+    });
 
     res.json(updatedRows);
   } catch (err) {
-    console.error("❌ Error fetching complaints:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Error in GET /api/complaints:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 
 
