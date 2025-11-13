@@ -21,7 +21,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// PostgreSQL setup
+
 const { Pool } = pkg;
 
 const pool = new Pool({
@@ -32,7 +32,7 @@ const pool = new Pool({
   port: process.env.PGPORT || 5432,
 });
 
-// Test DB connection
+
 pool.connect()
   .then(() => console.log("✅ Connected to PostgreSQL database successfully"))
   .catch((err) => console.error("❌ Database connection failed:", err.message));
@@ -44,7 +44,7 @@ if (!fs.existsSync(uploadDir)) {
   console.log("📁 Created uploads directory at", uploadDir);
 }
 
-// Multer setup for uploads
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -56,7 +56,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Routes
+
 app.get("/", (req, res) => {
   res.send("🚀 PMC Complaint Portal Backend is running!");
 });
@@ -96,7 +96,7 @@ app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => 
   }
 });
 
-// Global error handler
+
 app.use((err, req, res, next) => {
   console.error("❌ Internal Server Error:", err);
   res.status(500).json({
@@ -105,7 +105,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server
+
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
 });
