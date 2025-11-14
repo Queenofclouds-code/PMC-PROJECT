@@ -1,214 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pune Municipal Complaint Portal</title>
-    <style>
-      body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f4f6f8;
-        margin: 0;
-        padding: 0;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pune Municipal Complaint Portal</title>
 
-      header {
-        background-color: #0078d7;
-        color: white;
-        padding: 15px 0;
-        text-align: center;
-      }
+  <style>
+    body {
+      background: #e9eef5;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      background: #0066cc;
+      padding: 20px;
+      text-align: center;
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .container {
+      background: white;
+      width: 60%;
+      margin: 30px auto;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 17px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #004c99;
+    }
+    #openCameraBtn {
+      background: #28a745;
+      margin-top: 10px;
+    }
+    #openCameraBtn:hover {
+      background: #1e7e34;
+    }
+    .preview img {
+      width: 120px;
+      margin: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
 
-      .container {
-        max-width: 700px;
-        margin: 30px auto;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-      }
+<body>
 
-      h2 {
-        text-align: center;
-        color: #333;
-      }
+<div class="header">Pune Municipal Complaint Portal</div>
 
-      form {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-      }
+<div class="container">
+  <h2 style="text-align:center;">Register a Complaint</h2>
 
-      input,
-      textarea,
-      select,
-      button {
-        font-size: 1em;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-      }
+  <form id="complaintForm" enctype="multipart/form-data">
+    <input type="text" id="fullname" placeholder="Full Name" required />
+    <input type="text" id="phone" placeholder="Phone Number" required />
 
-      button {
-        background-color: #0078d7;
-        color: white;
-        cursor: pointer;
-        transition: background 0.3s;
-      }
+    <select id="complaintType" required>
+      <option value="">-- Select Complaint Type --</option>
+      <option>Garbage</option>
+      <option>Street Light</option>
+      <option>Water Supply</option>
+      <option>Sewage</option>
+      <option>Other</option>
+    </select>
 
-      button:hover {
-        background-color: #005fa3;
-      }
+    <textarea id="description" placeholder="Describe your issue..." rows="4"></textarea>
 
-      .preview {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-      }
+    <select id="urgency" required>
+      <option value="">-- Urgency Level --</option>
+      <option>Low</option>
+      <option>Medium</option>
+      <option>High</option>
+    </select>
 
-      .preview img,
-      .preview video {
-        width: 100px;
-        height: 100px;
-        border-radius: 5px;
-        object-fit: cover;
-        border: 1px solid #ccc;
-      }
-    </style>
-  </head>
+    <label>Upload Images/Videos (optional)</label>
+    <input type="file" id="files" accept="image/*,video/*" multiple />
 
-  <body>
-    <header>
-      <h1>Pune Municipal Complaint Portal</h1>
-    </header>
+    <!-- 📸 CAMERA BUTTON -->
+    <button type="button" id="openCameraBtn">📸 Capture Photo Using Camera</button>
 
-    <div class="container">
-      <h2>Register a Complaint</h2>
-      <form id="complaintForm">
-        <input type="text" id="fullname" placeholder="Full Name" required />
-        <input type="tel" id="phone" placeholder="Phone Number" required />
-        <select id="complaint_type" required>
-          <option value="">-- Select Complaint Type --</option>
-          <option value="Garbage">Garbage</option>
-          <option value="Road Damage">Road Damage</option>
-          <option value="Water Supply">Water Supply</option>
-          <option value="Electricity">Electricity</option>
-          <option value="Street Light">Street Light</option>
-        </select>
-        <textarea
-          id="description"
-          placeholder="Describe your issue..."
-          rows="4"
-          required
-        ></textarea>
-        <select id="urgency" required>
-          <option value="">-- Urgency Level --</option>
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-        </select>
+    <!-- Hidden input for camera capture -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" />
 
-        <label for="files">Upload Images/Videos (optional)</label>
-        <input
-          type="file"
-          id="files"
-          name="files"
-          accept="image/*,video/*"
-          multiple
-        />
+    <div class="preview" id="preview"></div>
 
-        <div class="preview" id="preview"></div>
+    <input type="text" id="latitude" placeholder="Latitude" readonly />
+    <input type="text" id="longitude" placeholder="Longitude" readonly />
 
-        <input
-          type="text"
-          id="latitude"
-          placeholder="Latitude"
-          readonly
-          required
-        />
-        <input
-          type="text"
-          id="longitude"
-          placeholder="Longitude"
-          readonly
-          required
-        />
+    <button type="submit">Submit Complaint</button>
+  </form>
+</div>
 
-        <button type="submit">Submit Complaint</button>
-      </form>
-    </div>
+<script>
+// ------------------------------
+// AUTO-FILL LOCATION ON PAGE LOAD
+// ------------------------------
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition((pos) => {
+    document.getElementById("latitude").value = pos.coords.latitude.toFixed(6);
+    document.getElementById("longitude").value = pos.coords.longitude.toFixed(6);
+  });
+}
 
-    <script>
-      const form = document.getElementById("complaintForm");
-      const filesInput = document.getElementById("files");
-      const previewContainer = document.getElementById("preview");
+const filesInput = document.getElementById("files");
+const previewContainer = document.getElementById("preview");
 
-      // ✅ Preview selected media
-      filesInput.addEventListener("change", () => {
-        previewContainer.innerHTML = "";
-        Array.from(filesInput.files).forEach((file) => {
-          const mediaElement = document.createElement(
-            file.type.startsWith("video") ? "video" : "img"
-          );
-          mediaElement.src = URL.createObjectURL(file);
-          if (file.type.startsWith("video")) mediaElement.controls = true;
-          previewContainer.appendChild(mediaElement);
-        });
-      });
+// ------------------------------
+// 📸 CAMERA CAPTURE LOGIC
+// ------------------------------
+document.getElementById("openCameraBtn").addEventListener("click", () => {
+  document.getElementById("cameraInput").click();
+});
 
-      // ✅ Get location automatically
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            document.getElementById("latitude").value =
-              pos.coords.latitude.toFixed(6);
-            document.getElementById("longitude").value =
-              pos.coords.longitude.toFixed(6);
-          },
-          () => alert("Unable to fetch location.")
-        );
-      }
+document.getElementById("cameraInput").addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file) return;
 
-      // ✅ Form submission
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+  // Preview captured image
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+  previewContainer.appendChild(img);
 
-        const fd = new FormData();
-        fd.append("fullname", document.getElementById("fullname").value);
-        fd.append("phone", document.getElementById("phone").value);
-        fd.append(
-          "complaint_type",
-          document.getElementById("complaint_type").value
-        );
-        fd.append("description", document.getElementById("description").value);
-        fd.append("urgency", document.getElementById("urgency").value);
-        fd.append("latitude", document.getElementById("latitude").value);
-        fd.append("longitude", document.getElementById("longitude").value);
+  // Add to main file input
+  addFileToMainInput(file);
 
-        Array.from(filesInput.files).forEach((f) =>
-          fd.append("files", f, f.name)
-        );
+  // Update GPS for camera image
+  navigator.geolocation.getCurrentPosition((pos) => {
+    document.getElementById("latitude").value = pos.coords.latitude.toFixed(6);
+    document.getElementById("longitude").value = pos.coords.longitude.toFixed(6);
+  });
+});
 
-        try {
-          const response = await fetch("/api/complaints", {
-            method: "POST",
-            body: fd,
-          });
+// Utility: Append camera-captured file to main file input
+function addFileToMainInput(newFile) {
+  const dataTransfer = new DataTransfer();
 
-          const result = await response.json();
-          if (response.ok) {
-            alert("✅ " + (result.message || "Complaint submitted successfully!"));
-            form.reset();
-            previewContainer.innerHTML = "";
-          } else {
-            alert("❌ Failed to submit complaint: " + (result.error || "Unknown error"));
-          }
-        } catch (error) {
-          console.error(error);
-          alert("❌ Something went wrong while submitting the complaint.");
-        }
-      });
-    </script>
-  </body>
+  // Keep existing files
+  [...filesInput.files].forEach(f => dataTransfer.items.add(f));
+
+  // Add camera file
+  dataTransfer.items.add(newFile);
+
+  filesInput.files = dataTransfer.files;
+}
+
+// Preview for regular file picker
+filesInput.addEventListener("change", function () {
+  previewContainer.innerHTML = "";
+  [...this.files].forEach(file => {
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    previewContainer.appendChild(img);
+  });
+});
+
+// ------------------------------
+// FORM SUBMIT
+// ------------------------------
+document.getElementById("complaintForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const formData = new FormData();
+  formData.append("fullname", fullname.value);
+  formData.append("phone", phone.value);
+  formData.append("complaint_type", complaintType.value);
+  formData.append("description", description.value);
+  formData.append("urgency", urgency.value);
+  formData.append("latitude", latitude.value);
+  formData.append("longitude", longitude.value);
+
+  [...filesInput.files].forEach(file => formData.append("files", file));
+
+  try {
+    const res = await fetch("https://gist.aeronica.in/api/complaints", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    alert(data.message || "Complaint Submitted!");
+  } catch (err) {
+    alert("Something went wrong!");
+  }
+});
+</script>
+
+</body>
 </html>
