@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pune Municipal Complaint Portal</title>
 
   <style>
@@ -11,33 +11,39 @@
       margin: 0;
       font-family: Arial, sans-serif;
     }
+
     .header {
       background: #0066cc;
       padding: 20px;
       text-align: center;
       color: white;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: bold;
     }
+
+    /* 🟦 RESPONSIVE CONTAINER */
     .container {
       background: white;
-      width: 60%;
-      margin: 30px auto;
+      max-width: 500px;   /* <--- FIXED WIDTH FOR LARGE SCREENS */
+      width: 90%;         /* <--- ADJUSTS ON MOBILE */
+      margin: 25px auto;
       padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
+
     input, select, textarea {
       width: 100%;
       padding: 12px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: 1px solid #aaa;
-      font-size: 16px;
+      margin-top: 12px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+      font-size: 15px;
     }
+
     button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       font-size: 17px;
       background: #0066cc;
       color: white;
@@ -46,21 +52,27 @@
       cursor: pointer;
       margin-top: 15px;
     }
-    button:hover {
-      background: #004c99;
-    }
+
     #openCameraBtn {
       background: #28a745;
-      margin-top: 10px;
     }
+
     #openCameraBtn:hover {
       background: #1e7e34;
     }
+
     .preview img {
-      width: 120px;
-      margin: 10px;
+      width: 100px;
+      margin-top: 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
+    }
+
+    /* 📱 MOBILE IMPROVEMENTS */
+    @media (max-width: 480px) {
+      .header { font-size: 22px; }
+      button { font-size: 16px; }
+      input, select, textarea { font-size: 14px; }
     }
   </style>
 </head>
@@ -73,6 +85,7 @@
   <h2 style="text-align:center;">Register a Complaint</h2>
 
   <form id="complaintForm" enctype="multipart/form-data">
+
     <input type="text" id="fullname" placeholder="Full Name" required />
     <input type="text" id="phone" placeholder="Phone Number" required />
 
@@ -97,10 +110,10 @@
     <label>Upload Images/Videos (optional)</label>
     <input type="file" id="files" accept="image/*,video/*" multiple />
 
-    <!-- 📸 CAMERA BUTTON -->
+    <!-- Camera Button -->
     <button type="button" id="openCameraBtn">📸 Capture Photo Using Camera</button>
 
-    <!-- Hidden input for camera capture -->
+    <!-- Camera Input -->
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" />
 
     <div class="preview" id="preview"></div>
@@ -109,76 +122,61 @@
     <input type="text" id="longitude" placeholder="Longitude" readonly />
 
     <button type="submit">Submit Complaint</button>
+
   </form>
 </div>
 
 <script>
-// ------------------------------
-// AUTO-FILL LOCATION ON PAGE LOAD
-// ------------------------------
+/* ---------- AUTO LOCATION ----------- */
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition((pos) => {
-    document.getElementById("latitude").value = pos.coords.latitude.toFixed(6);
-    document.getElementById("longitude").value = pos.coords.longitude.toFixed(6);
+    latitude.value = pos.coords.latitude.toFixed(6);
+    longitude.value = pos.coords.longitude.toFixed(6);
   });
 }
 
+/* ---------- CAMERA LOGIC ----------- */
 const filesInput = document.getElementById("files");
 const previewContainer = document.getElementById("preview");
 
-// ------------------------------
-// 📸 CAMERA CAPTURE LOGIC
-// ------------------------------
-document.getElementById("openCameraBtn").addEventListener("click", () => {
+document.getElementById("openCameraBtn").onclick = () => {
   document.getElementById("cameraInput").click();
-});
+};
 
-document.getElementById("cameraInput").addEventListener("change", function () {
+document.getElementById("cameraInput").onchange = function () {
   const file = this.files[0];
   if (!file) return;
 
-  // Preview captured image
   const img = document.createElement("img");
   img.src = URL.createObjectURL(file);
   previewContainer.appendChild(img);
 
-  // Add to main file input
   addFileToMainInput(file);
 
-  // Update GPS for camera image
   navigator.geolocation.getCurrentPosition((pos) => {
-    document.getElementById("latitude").value = pos.coords.latitude.toFixed(6);
-    document.getElementById("longitude").value = pos.coords.longitude.toFixed(6);
+    latitude.value = pos.coords.latitude.toFixed(6);
+    longitude.value = pos.coords.longitude.toFixed(6);
   });
-});
+};
 
-// Utility: Append camera-captured file to main file input
 function addFileToMainInput(newFile) {
-  const dataTransfer = new DataTransfer();
-
-  // Keep existing files
-  [...filesInput.files].forEach(f => dataTransfer.items.add(f));
-
-  // Add camera file
-  dataTransfer.items.add(newFile);
-
-  filesInput.files = dataTransfer.files;
+  const dt = new DataTransfer();
+  [...filesInput.files].forEach(f => dt.items.add(f));
+  dt.items.add(newFile);
+  filesInput.files = dt.files;
 }
 
-// Preview for regular file picker
-filesInput.addEventListener("change", function () {
+filesInput.onchange = function () {
   previewContainer.innerHTML = "";
   [...this.files].forEach(file => {
     const img = document.createElement("img");
     img.src = URL.createObjectURL(file);
     previewContainer.appendChild(img);
   });
-});
+};
 
-// ------------------------------
-// FORM SUBMIT
-// ------------------------------
-document.getElementById("complaintForm").addEventListener("submit", async function (e) {
+/* ---------- SUBMIT FORM ----------- */
+document.getElementById("complaintForm").onsubmit = async (e) => {
   e.preventDefault();
 
   const formData = new FormData();
@@ -192,18 +190,14 @@ document.getElementById("complaintForm").addEventListener("submit", async functi
 
   [...filesInput.files].forEach(file => formData.append("files", file));
 
-  try {
-    const res = await fetch("https://gist.aeronica.in/api/complaints", {
-      method: "POST",
-      body: formData
-    });
+  const res = await fetch("https://gist.aeronica.in/api/complaints", {
+    method: "POST",
+    body: formData,
+  });
 
-    const data = await res.json();
-    alert(data.message || "Complaint Submitted!");
-  } catch (err) {
-    alert("Something went wrong!");
-  }
-});
+  const data = await res.json();
+  alert(data.message || "Complaint Submitted!");
+};
 </script>
 
 </body>
