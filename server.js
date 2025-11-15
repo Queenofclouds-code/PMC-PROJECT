@@ -115,10 +115,27 @@ app.get("/", (req, res) => {
   res.send("🚀 PMC Complaint Portal Backend is running!");
 });
 
+// -------------------------------------------------------
+// ✅ PHONE VALIDATION FUNCTION (ONLY THING ADDED)
+// -------------------------------------------------------
+function isValidPhone(phone) {
+  const phoneRegex = /^[6-9]\d{9}$/; // Indian 10-digit mobile numbers
+  return phoneRegex.test(phone);
+}
+
 // Submit complaint
 app.post("/api/complaints", upload.array("files", 5), async (req, res, next) => {
   try {
     const { fullname, phone, complaint_type, description, urgency, latitude, longitude } = req.body;
+
+    // -------------------------------------------------------
+    // 🔴 VALIDATE PHONE HERE (ONLY CHANGE ADDED)
+    // -------------------------------------------------------
+    if (!isValidPhone(phone)) {
+      return res.status(400).json({
+        message: "Invalid phone number. Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9."
+      });
+    }
 
     const file_urls = (req.files || []).map((file) => `/uploads/${file.filename}`);
 
